@@ -1,0 +1,6 @@
+[submodule "ProgrammingLanguageCourse"]
+	path = ProgrammingLanguageCourse
+	url = https://github.com/ya0guang/ProgrammingLanguageCourse
+[submodule "ToyPythonCompiler"]
+	path = ToyPythonCompiler
+	url = https://github.com/ya0guang/ToyPythonCompiler
