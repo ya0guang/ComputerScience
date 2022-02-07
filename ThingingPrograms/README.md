@@ -1,0 +1,1 @@
+Code and Notes when reading the book *Thinking Programs: Logical Modeling and Reasoning About Languages, Data, Computations, and Executions*.
