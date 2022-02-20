@@ -426,3 +426,112 @@ Compute flatten_aux (N L L) L.
 
 (* 7.4 Proof by case *)
 
+Lemma example7_size: forall t, example7 t = false -> size t = 3.
+Proof.
+    intros t.
+    destruct t.
+    simpl; discriminate.
+    simpl.
+    destruct t1.
+    destruct t2.
+    auto.
+    discriminate.
+    discriminate.
+Qed.
+
+Lemma flatten_aux_size: forall t1 t2, size (flatten_aux t1 t2) = size t1 + size t2 + 1.
+Proof.
+    intros t1.
+    induction t1.
+    simpl.
+    intros t2; ring.
+    simpl.
+    intros t2.
+    rewrite IHt1_1.
+    rewrite IHt1_2.
+    ring.
+Qed.
+
+(* `injection` example *)
+
+Lemma not_subterm_self_1: forall x y, ~ x = N x y.
+Proof.
+    induction x.
+    intros y. discriminate.
+    intros y abs.
+    injection abs.
+    intros h2 h1.
+    (* show a contradiction *)
+    assert (IHx1' : x1 <> N x1 x2).
+      apply IHx1.
+    case IHx1'.
+    exact h1.
+Qed.
+
+(* 8 Numbers in Coq system *)
+
+Print nat.
+
+Fixpoint nat_fact (n: nat) : nat :=
+    match n with
+    | 0 => 1
+    | S p => S p * nat_fact p
+    end.
+
+Fixpoint fib (n: nat) : nat :=
+    match n with
+    | 0 => 0
+    | S q => match q with
+        | 0 => 1
+        | S p => fib p + fib q
+       end
+    end.
+
+Require Import ZArith.
+
+Open Scope Z_scope.
+
+About Z.iter.
+
+Definition fact_aux (n: Z) := 
+    Z.iter n (fun p => (fst p  + 1, snd p * (fst p + 1))) (0, 1).
+
+Definition Z_fact (n: Z) := snd (fact_aux n).
+
+Compute Z_fact 100.
+
+Close Scope Z_scope.
+
+(* 9. Inductive Properties *)
+
+Inductive even : nat -> Prop :=
+ | even0: even 0
+ | evenS : forall x: nat, even x -> even (S (S x)).
+
+ (* 9.2 Proofs by induction on inductive predicates *)
+
+ Lemma even_mult: forall x, even x -> exists y, x = 2 * y.
+ Proof.
+    intros x H.
+    induction H.
+    exists 0; ring.
+    (* decompose the exists clause *)
+    destruct IHeven as [y Heq].
+    rewrite Heq.
+    exists (y + 1); ring.
+ Qed.
+ 
+(* 9.3 `Inversion` tactic *)
+
+Lemma  not_even_1: ~even 1 .
+Proof.
+    intros even1.
+    inversion even1.
+Qed.
+
+Lemma even_inv: forall x, even (S (S x)) -> even x.
+Proof.
+    intros x H.
+    inversion H.
+    assumption.
+Qed.

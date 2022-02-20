@@ -1,0 +1,4 @@
+type_synonym 'a seq = "nat \<Rightarrow> 'a"
+
+definition isconst :: "'a\<Rightarrow> 'a seq \<Rightarrow> bool" where 
+"isconst c s = (any i::nat. s i = c)"
