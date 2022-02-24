@@ -91,6 +91,8 @@ Inductive ev : nat -> Prop :=
   | ev_0 : ev 0
   | ev_SS (n : nat) (H : ev n) : ev (S (S n)).
 
+Check ( ev_SS 5).
+
 (** This definition is interestingly different from previous uses of
     [Inductive].  For one thing, we are defining not a [Type] (like
     [nat]) or a function yielding a [Type] (like [list]), but rather a
@@ -117,6 +119,7 @@ Inductive ev : nat -> Prop :=
 Fail Inductive wrong_ev (n : nat) : Prop :=
   | wrong_ev_0 : wrong_ev 0
   | wrong_ev_SS (H: wrong_ev n) : wrong_ev (S (S n)).
+
 (* ===> Error: Last occurrence of "[wrong_ev]" must have "[n]"
         as 1st argument in "[wrong_ev 0]". *)
 
@@ -160,8 +163,17 @@ Qed.
 Theorem ev_double : forall n,
   ev (double n).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n. induction n as [| n' IHn].
+  - simpl. apply ev_0.
+  - simpl. apply ev_SS. apply IHn.
+Qed.
 (** [] *)
+
+Check (ev_SS 2 (ev_SS 0 ev_0)).
+
+Check (ev_0).
+
+Check (ev 0).
 
 (* ################################################################# *)
 (** * Using Evidence in Proofs *)
@@ -336,7 +348,8 @@ Proof.
 Theorem SSSSev__even : forall n,
   ev (S (S (S (S n)))) -> ev n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. inversion H. inversion H1. apply H3.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard (ev5_nonsense)
@@ -346,7 +359,9 @@ Proof.
 Theorem ev5_nonsense :
   ev 5 -> 2 + 2 = 9.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  inversion H. inversion H1. inversion H3.
+Qed.
 (** [] *)
 
 (** The [inversion] tactic does quite a bit of work. For
@@ -511,8 +526,11 @@ Qed.
 (** **** Exercise: 2 stars, standard (ev_sum) *)
 Theorem ev_sum : forall n m, ev n -> ev m -> ev (n + m).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros.
+  induction H as [| n' Hev IHev].
+  - simpl. apply H0.
+  - simpl. apply ev_SS. apply IHev.
+Qed.
 
 (** **** Exercise: 4 stars, advanced, optional (ev'_ev)
 
@@ -532,7 +550,15 @@ Inductive ev' : nat -> Prop :=
 
 Theorem ev'_ev : forall n, ev' n <-> ev n.
 Proof.
- (* FILL IN HERE *) Admitted.
+  split.
+  - intros. induction H as [| | n m H'n Hn H'm Hm].
+    + apply ev_0.
+    + apply ev_SS. apply ev_0.
+    + apply ev_sum. apply Hn. apply Hm.
+  - intros. induction H as [| n Hn IHH].
+    + apply ev'_0.
+    + apply (ev'_sum 2 n ev'_2 IHH).
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced, especially useful (ev_ev__ev)
@@ -543,7 +569,10 @@ Proof.
 Theorem ev_ev__ev : forall n m,
   ev (n+m) -> ev n -> ev m.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction H0 as [| n Hn IHn].
+  - simpl in H. apply H.
+  - apply IHn. simpl in H. inversion H. apply H1.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (ev_plus_plus)
@@ -555,7 +584,16 @@ Proof.
 Theorem ev_plus_plus : forall n m p,
   ev (n+m) -> ev (n+p) -> ev (m+p).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  apply (ev_ev__ev (n + n)).
+  rewrite add_assoc.
+  assert (n + n + m + p = n + m + (n + p)).
+  rewrite add_assoc.
+  rewrite (add_comm (n + m) n). rewrite add_assoc. reflexivity.
+  Check (add_comm). rewrite H1.
+  apply ev_sum. apply H. apply H0. 
+  rewrite <- double_plus. apply ev_double.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -607,6 +645,8 @@ Proof.
   (* WORKED IN CLASS *)
   apply le_n.  Qed.
 
+Check (le_S).
+
 Theorem test_le2 :
   3 <= 6.
 Proof.
@@ -633,6 +673,11 @@ End Playground.
 Inductive square_of : nat -> nat -> Prop :=
   | sq n : square_of n (n * n).
 
+Example square_of_36: square_of 6 36.
+Proof.
+  apply (sq 6).
+Qed.
+
 Inductive next_nat : nat -> nat -> Prop :=
   | nn n : next_nat n (S n).
 
@@ -645,6 +690,15 @@ Inductive next_ev : nat -> nat -> Prop :=
     Define an inductive binary relation [total_relation] that holds
     between every pair of natural numbers. *)
 
+Inductive total_relation: nat -> nat -> Prop :=
+  | total_r n m: total_relation n m.
+
+Theorem total_relation_holds: forall n m: nat, total_relation n m.
+Proof.
+  intros.
+  apply (total_r n m).
+Qed.
+
 (* FILL IN HERE
 
     [] *)
@@ -653,6 +707,9 @@ Inductive next_ev : nat -> nat -> Prop :=
 
     Define an inductive binary relation [empty_relation] (on numbers)
     that never holds. *)
+
+Inductive empty_relation: nat -> nat -> Prop :=
+  | empty_r n m (H1: next_nat n m) (H2: next_nat m n): empty_relation n m.
 
 (* FILL IN HERE
 

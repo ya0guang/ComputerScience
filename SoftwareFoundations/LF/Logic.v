@@ -1936,8 +1936,7 @@ Proof.
   intros. apply H0. 
   assert (H1: ~ (~P \/Q) -> ~( P-> Q)).
   apply contrapositive. apply H.
-  unfold not in H1. destr intros. destruct H1.
-  - apply H1. apply H0. 
+  unfold not in H1.
 Admitted.
 
 
