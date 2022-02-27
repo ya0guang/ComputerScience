@@ -2134,18 +2134,27 @@ Proof.
   - unfold not in *. intros. injection H. intros. apply IHl in H0. destruct H0.
 Qed. 
 
-Theorem filter_ordered_merge: forall (X: Type) (l1 l2 l: list X) test, in_order_merge l1 l2 l -> (filter test l2 = []) /\ (filter test l1 = l1) -> filter test l = l1.
+Lemma filter_false: forall (X: Type) (l: list X) x test, ~ (filter test l = [x] ++ l).
 Proof.
-  intros X l1 l2 l test H.
-  induction H.
-  - simpl. reflexivity.
-  - destruct IHin_order_merge. destruct (test x1) eqn:eqx1. 
-    + simpl. rewrite eqx1. intros. apply IHin_order_merge in H0. assert (H2 := H0). rewrite H0. reflexivity. injection H1. intros H2. apply H2.
-    + simpl. rewrite eqx1. intros. destruct IHin_order_merge. apply IHin_order_merge in H0. rewrite H0.
-      rewrite <- H0 in H1. rewrite <- filter_twice_refl in H1. apply cons_false in H1. destruct H1. 
-      reflexivity.
-    + simpl. apply IHin_order_merge in H0. rewrite H0. f_equal.
+  intros. generalize dependent x. induction l. 
+  - unfold not. simpl. intros. inversion H.
+  - unfold not in *. intros. apply (IHl x). destruct (test x) eqn:  eqnx0. simpl in H. rewrite eqnx0 in H. injection H. intros.
+    apply H0. simpl in H. rewrite eqnx0 in H. 
 Admitted.
+
+Theorem filter_ordered_merge: forall (X: Type) (l1 l2 l: list X) test, in_order_merge l1 l2 l -> filter test l2 = [] -> filter test l1 = l1 -> filter test l = l1.
+Proof.
+  intros X l1 l2 l test HIMO Hl2 Hl1.
+  induction HIMO.
+  - simpl. reflexivity.
+  - destruct (test x1) eqn:eqx1.
+    + simpl in *. rewrite eqx1 in *. f_equal. injection Hl1. intros.  apply IHHIMO in Hl2. apply Hl2. apply H. 
+    + simpl in *. rewrite eqx1 in *. rewrite <- Hl1. apply IHHIMO in Hl2. rewrite <- Hl2 in Hl1. rewrite <- filter_twice_refl in Hl1. apply cons_false in Hl1. destruct Hl1. apply filter_false in Hl1.
+    destruct Hl1.
+  - destruct (test x2) eqn:eqx2.
+    + simpl in *. rewrite eqx2 in *. discriminate Hl2.
+    + simpl in *. rewrite eqx2 in *. apply IHHIMO in Hl2. apply Hl2. apply Hl1.
+Qed.
 
 
 (* Do not modify the following line: *)
@@ -2186,7 +2195,35 @@ Definition manual_grade_for_filter_challenge : option (nat*string) := None.
        forall l, pal l -> l = rev l.
 *)
 
-(* FILL IN HERE *)
+Inductive pal {X: Type}: list X -> Prop :=
+  | pal_nil : pal []
+  | pal_char (x: X) : pal [x]
+  | pal_ext (x: X) l (H: pal l) : pal ([x] ++ l ++ [x])
+.
+
+Theorem app_single: forall (X:Type) (l: list X) x, x::l = [x] ++ l.
+Proof.
+  simpl. reflexivity.
+Qed.
+
+
+Theorem pal_app_rev: forall (X: Type) (l: list X), pal (l ++ rev l).
+Proof.
+  intros. induction l.
+  - simpl. apply pal_nil.
+  - rewrite app_single. rewrite rev_app_distr. simpl. 
+    rewrite app_single. Search (_ ++ _ ++ _). rewrite app_assoc.
+    rewrite app_assoc. rewrite <- (app_assoc X ([x]) _ _ ). 
+    apply pal_ext. apply IHl.
+Qed.
+
+Theorem pal_rev: forall (X: Type) (l: list X), pal l -> l = rev l.
+Proof.
+  intros. induction H.
+  - reflexivity.
+  - reflexivity.
+  - simpl. rewrite rev_app_distr. simpl. rewrite <- IHpal. reflexivity.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_pal_pal_app_rev_pal_rev : option (nat*string) := None.
@@ -2200,6 +2237,19 @@ Definition manual_grade_for_pal_pal_app_rev_pal_rev : option (nat*string) := Non
 
      forall l, l = rev l -> pal l.
 *)
+
+Lemma rev_nil: forall (X: Type) (l: list X), rev l = [] <-> l = [].
+Admitted.
+
+Theorem palindrome_converse: forall (X: Type) (l: list X), l = rev l -> pal l.
+Proof.
+  intros. induction l.
+  - apply pal_nil.
+  - simpl in H. destruct (rev l) eqn: eqrev. 
+    + simpl in H. assert (H0: l = []).  apply rev_nil. apply eqrev. rewrite H0. apply pal_char.
+    + rewrite (app_single _ l0 _) in H. 
+      rewrite <- app_assoc in H. injection H. intros. rewrite H0. rewrite app_single.
+Admitted.
 
 (* FILL IN HERE
 
@@ -2222,7 +2272,17 @@ Definition manual_grade_for_pal_pal_app_rev_pal_rev : option (nat*string) := Non
     lists (with elements of type X) that have no elements in
     common. *)
 
-(* FILL IN HERE *)
+Inductive disjoint {X: Type} : list X -> list X -> Prop :=
+  | dis_nil: disjoint nil nil
+  | dis1 l1 l2 x1 (Hl: disjoint l1 l2) (Hx: ~ In x1 l2) : disjoint (x1::l1) l2
+  | dis2 l1 l2 x2 (Hl: disjoint l1 l2) (Hx: ~ In x2 l2) : disjoint l1 (x2::l2)
+.
+
+Theorem disjoint_test: disjoint [1; 2; 5] [3; 4; 6].
+Proof.
+  repeat constructor; auto.
+  unfold not. simpl. intros.
+Admitted.
 
 (** Next, use [In] to define an inductive proposition [NoDup X
     l], which should be provable exactly when [l] is a list (with
@@ -2231,12 +2291,21 @@ Definition manual_grade_for_pal_pal_app_rev_pal_rev : option (nat*string) := Non
     bool []] should be provable, while [NoDup nat [1;2;1]] and
     [NoDup bool [true;true]] should not be.  *)
 
-(* FILL IN HERE *)
+Inductive NoDup {X: Type} : list X -> Prop :=
+  | nodup_nil : NoDup nil
+  | nodup_ext (x: X) l (Hl: NoDup l) (Hx: ~ In x l) : NoDup (x::l)
+.
 
 (** Finally, state and prove one or more interesting theorems relating
     [disjoint], [NoDup] and [++] (list append).  *)
 
-(* FILL IN HERE *)
+Theorem nodup_disjoint: forall (X: Type) (l1 l2: list X), disjoint l1 l2 -> NoDup (l1 ++ l2).
+Proof.
+  intros.
+  induction l2.
+    
+Admitted.
+
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_NoDup_disjoint_etc : option (nat*string) := None.
@@ -2262,7 +2331,8 @@ Proof.
     that [l] contains at least one repeated element (of type [X]).  *)
 
 Inductive repeats {X:Type} : list X -> Prop :=
-  (* FILL IN HERE *)
+  | rep_gen x (l: list X) (H: In x l): repeats (x::l)
+  | rep_cons x l (H: repeats l) : repeats (x::l)
 .
 
 (* Do not modify the following line: *)
@@ -2431,14 +2501,26 @@ Lemma app_ne : forall (a : ascii) s re0 re1,
   a :: s =~ (App re0 re1) <->
   ([ ] =~ re0 /\ a :: s =~ re1) \/
   exists s0 s1, s = s0 ++ s1 /\ a :: s0 =~ re0 /\ s1 =~ re1.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof.      
+  split.
+  - intros. apply app_exists in H. destruct H. destruct H. 
+    destruct H as [H1 [H2 H3]]. destruct x as [| xh xt] eqn:eqx.
+    + left. split. apply H2. simpl in H1. rewrite H1. apply H3.
+    + right. simpl in H1. injection H1. exists (xt). exists x0. split.
+      apply H. split. rewrite H0. apply H2. apply H3.
+  - intros. destruct H. destruct H.
+    + apply app_exists. exists []. exists (a::s).
+      split. reflexivity. split. apply H. apply H0.
+    + destruct H. destruct H. destruct H as [H1 [H2 H3]].
+      apply app_exists. exists (a::x), (x0).
+      split. simpl. rewrite H1. reflexivity. split. apply H2. apply H3.
+Qed.
 (** [] *)
 
 (** [s] matches [Union re0 re1] iff [s] matches [re0] or [s] matches [re1]. *)
 Lemma union_disj : forall (s : string) re0 re1,
   s =~ Union re0 re1 <-> s =~ re0 \/ s =~ re1.
-Proof.
+Proof.  
   intros. split.
   - intros. inversion H.
     + left. apply H2.
@@ -2468,7 +2550,21 @@ Lemma star_ne : forall (a : ascii) s re,
   a :: s =~ Star re <->
   exists s0 s1, s = s0 ++ s1 /\ a :: s0 =~ re /\ s1 =~ Star re.
 Proof.
+  intros. split.
+  - intros. remember (Star re) as Hre. remember (a :: s) as eqs. induction H.
+    + inversion Heqeqs. 
+    + inversion HeqHre. 
+    + inversion HeqHre.
+    + inversion HeqHre.
+    + inversion HeqHre.
+    + inversion Heqeqs.
+    + inversion HeqHre. apply IHexp_match2 in HeqHre. destruct HeqHre as[s0 [s5]]. destruct H1 as [H1 [H3 H4]].
+      exists s0, s5. split. apply H1. split. apply H3. rewrite H2 in H4. apply H4. destruct s1 eqn: eqs1. 
+
   (* FILL IN HERE *) Admitted.
+
+(* Reference: 
+https://github.com/cattingcat/coq_lessons/blob/82ac6ccbc2ef7bd4fc38c5b8d1b5953115a86c2c/softwarefoundations/vol1/IndPropRegexp.v *)
 (** [] *)
 
 (** The definition of our regex matcher will include two fixpoint
