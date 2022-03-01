@@ -65,6 +65,8 @@ Print ev.
     it gives us a natural interpretation of the type of the [ev_SS]
     constructor: *)
 
+Check ev_SS.
+
 Check ev_SS
   : forall n,
     ev n ->
@@ -178,10 +180,10 @@ Print ev_4'''.
 
 Theorem ev_8 : ev 8.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply ev_SS. apply ev_SS. apply ev_4.
+Qed.
 
-Definition ev_8' : ev 8
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition ev_8' : ev 8 := (ev_SS 6 (ev_SS 4 (ev_SS 2 (ev_SS 0 ev_0)))).
 (** [] *)
 
 (* ################################################################# *)
@@ -201,11 +203,19 @@ Definition ev_8' : ev 8
 
 Theorem ev_plus4 : forall n, ev n -> ev (4 + n).
 Proof.
-  intros n H. simpl.
+  Show Proof.
+  intros n H. 
+  Show Proof.
+  simpl.
+  Show Proof.
   apply ev_SS.
   apply ev_SS.
+  Show Proof.
   apply H.
+  Show Proof.
 Qed.
+
+Check ev_plus4 4.
 
 (** What is the proof object corresponding to [ev_plus4]?
 
@@ -218,6 +228,8 @@ Qed.
 Definition ev_plus4' : forall n, ev n -> ev (4 + n) :=
   fun (n : nat) => fun (H : ev n) =>
     ev_SS (S (S n)) (ev_SS n H).
+
+Check ev_plus4'.
 
 (** Recall that [fun n => blah] means "the function that, given [n],
     yields [blah]," and that Coq treats [4 + n] and [S (S (S (S n)))]
@@ -358,7 +370,11 @@ Print prod.
 Theorem proj1' : forall P Q,
   P /\ Q -> P.
 Proof.
-  intros P Q HPQ. destruct HPQ as [HP HQ]. apply HP.
+  intros P Q HPQ. 
+  Show Proof.
+  destruct HPQ as [HP HQ].
+  Show Proof.
+  apply HP.
   Show Proof.
 Qed.
 
@@ -369,11 +385,14 @@ Qed.
 Lemma and_comm : forall P Q : Prop, P /\ Q <-> Q /\ P.
 Proof.
   intros P Q. split.
-  - intros [HP HQ]. split.
+  Show Proof.
+  - Show Proof. intros [HP HQ]. Show Proof. split. Show Proof.
     + apply HQ.
+    Show Proof.
     + apply HP.
-  - intros [HQ HP]. split.
-    + apply HP.
+    Show Proof.
+  - Show Proof. intros [HQ HP]. Show Proof. split. Show Proof.
+    + apply HP. Show Proof.
     + apply HQ.
 Qed.
 
@@ -395,8 +414,24 @@ Definition and_comm' P Q : P /\ Q <-> Q /\ P :=
 
     Construct a proof object for the following proposition. *)
 
-Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R.
+  intros P Q R.
+  intros HPQ HQR.
+  destruct HPQ. destruct HQR.
+  split. apply H. apply H2.
+  Show Proof.
+Defined.
+
+Definition conj_fact' : forall P Q R, P /\ Q -> Q /\ R -> P /\ R :=
+  (fun (P Q R: Prop) => (fun (HPQ: P/\Q) => (fun (HQR: Q/\R) =>
+  match HPQ with
+  | conj x1 y1 => (fun (H1: P) (_ : Q) =>
+    match HQR with
+    | conj x2 y2 => (fun (_: Q) (H2: R) => conj H1 H2) x2 y2
+    end) x1 y1
+  end))).
+
+Check conj_fact.
 (** [] *)
 
 (* ================================================================= *)
@@ -410,6 +445,10 @@ Module Or.
 Inductive or (P Q : Prop) : Prop :=
   | or_introl : P -> or P Q
   | or_intror : Q -> or P Q.
+
+Check or_introl.
+
+Check conj.
 
 Arguments or_introl [P] [Q].
 Arguments or_intror [P] [Q].
@@ -428,7 +467,11 @@ Definition inj_l : forall (P Q : Prop), P -> P \/ Q :=
 
 Theorem inj_l' : forall (P Q : Prop), P -> P \/ Q.
 Proof.
-  intros P Q HP. left. apply HP.
+  Show Proof.
+  intros P Q HP. 
+  Show Proof.
+  left. Show Proof.
+  apply HP. Show Proof.
 Qed.
 
 Definition or_elim : forall (P Q R : Prop), (P \/ Q) -> (P -> R) -> (Q -> R) -> R :=
@@ -440,11 +483,13 @@ Definition or_elim : forall (P Q R : Prop), (P \/ Q) -> (P -> R) -> (Q -> R) -> 
 
 Theorem or_elim' : forall (P Q R : Prop), (P \/ Q) -> (P -> R) -> (Q -> R) -> R.
 Proof.
-  intros P Q R HPQ HPR HQR.
-  destruct HPQ as [HP | HQ].
-  - apply HPR. apply HP.
-  - apply HQR. apply HQ.
+  intros P Q R HPQ HPR HQR. Show Proof.
+  destruct HPQ as [HP | HQ]. Show Proof.
+  - apply HPR. Show Proof. apply HP. Show Proof.
+  - apply HQR. apply HQ. Show Proof.
 Qed.
+
+Check or_intror.
 
 End Or.
 
@@ -452,8 +497,16 @@ End Or.
 
     Construct a proof object for the following proposition. *)
 
-Definition or_commut' : forall P Q, P \/ Q -> Q \/ P
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition or_commut' : forall P Q, P \/ Q -> Q \/ P :=
+  fun P Q HPQ =>
+    match HPQ with
+    | or_introl HQP => or_intror HQP
+    | or_intror HQP => or_introl HQP
+    end
+.
+
+Check or_commut'.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -467,6 +520,8 @@ Module Ex.
 
 Inductive ex {A : Type} (P : A -> Prop) : Prop :=
   | ex_intro : forall x : A, P x -> ex P.
+
+Check @ex_intro.
 
 Notation "'exists' x , p" :=
   (ex (fun x => p))
@@ -498,8 +553,11 @@ Definition some_nat_is_even : exists n, ev n :=
 
     Construct a proof object for the following proposition. *)
 
-Definition ex_ev_Sn : ex (fun n => ev (S n))
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition ex_ev_Sn : ex (fun n => ev (S n)) :=
+  ex_intro (fun n => ev (S n)) 3 (ev_SS 2 (ev_SS 0 ev_0)).
+
+Check ex_ev_Sn.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -510,6 +568,8 @@ Definition ex_ev_Sn : ex (fun n => ev (S n))
 Inductive True : Prop :=
   | I : True.
 
+Check I.
+
 (** It has one constructor (so every proof of [True] is the same, so
     being given a proof of [True] is not informative.) *)
 
@@ -517,14 +577,16 @@ Inductive True : Prop :=
 
     Construct a proof object for the following proposition. *)
 
-Definition p_implies_true : forall P, P -> True
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition p_implies_true : forall P, P -> True :=
+  (fun P => fun _: P => I).
 (** [] *)
 
 (** [False] is equally simple -- indeed, so simple it may look
     syntactically wrong at first glance! *)
 
 Inductive False : Prop := .
+
+Check False.
 
 (** That is, [False] is an inductive type with _no_ constructors --
     i.e., no way to build evidence for it. For example, there is
@@ -542,6 +604,8 @@ Fail Definition contra : False :=
 Definition false_implies_zero_eq_one : False -> 0 = 1 :=
   fun contra => match contra with end.
 
+Check false_implies_zero_eq_one.
+
 (** Since there are no branches to evaluate, the [match] expression
     can be considered to have any type we want, including [0 = 1].
     Indeed, it's impossible to ever cause the [match] to be evaluated,
@@ -552,8 +616,10 @@ Definition false_implies_zero_eq_one : False -> 0 = 1 :=
 
     Construct a proof object for the following proposition. *)
 
-Definition ex_falso_quodlibet' : forall P, False -> P
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition ex_falso_quodlibet' : forall P, False -> P :=
+  fun P => (fun contra => match contra with end).
+
+Check (ex_falso_quodlibet').
 (** [] *)
 
 End Props.
@@ -568,6 +634,8 @@ Module MyEquality.
 
 Inductive eq {X:Type} : X -> X -> Prop :=
   | eq_refl : forall x, eq x x.
+
+Check @eq_refl.
 
 Notation "x == y" := (eq x y)
                        (at level 70, no associativity)
@@ -626,7 +694,10 @@ Definition singleton : forall (X:Type) (x:X), []++[x] == x::[]  :=
 Lemma equality__leibniz_equality : forall (X : Type) (x y: X),
   x == y -> forall P:X->Prop, P x -> P y.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros. Show Proof.
+  destruct H. Show Proof.
+  apply H0.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (leibniz_equality__equality)
@@ -639,7 +710,9 @@ Proof.
 Lemma leibniz_equality__equality : forall (X : Type) (x y: X),
   (forall P:X->Prop, P x -> P y) -> x == y.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros. assert (H0: eq x x -> eq x y). apply H. destruct H0.
+  apply eq_refl. apply eq_refl.
+Qed.
 
 (** [] *)
 
