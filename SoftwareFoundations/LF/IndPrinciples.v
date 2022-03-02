@@ -851,7 +851,7 @@ Definition nat_ind_tidy := build_proof.
 
 Lemma even_ev : forall n: nat, even n = true -> ev n.
 Proof.
-  induction n; intros.
+  induction n; intros. Show Proof.
   - apply ev_0.
   - destruct n.
     + simpl in H. inversion H.
