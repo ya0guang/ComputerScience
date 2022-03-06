@@ -207,13 +207,18 @@ Proof. reflexivity. Qed.
    [X] (inclusive: [1 + 2 + ... + X]) in the variable [Y].  Make sure
    your solution satisfies the test that follows. *)
 
-Definition pup_to_n : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition pup_to_n : com :=
+  <{ Y := 0;
+      while (1 <= X)
+      do (Y := Y + X; X := X - 1) end}>.
+  
 
 Example pup_to_n_1 :
   test_ceval (X !-> 5) pup_to_n
   = Some (0, 15, 0).
-(* FILL IN HERE *) Admitted.
+Proof.
+  reflexivity.
+Qed.
 (* 
 Proof. reflexivity. Qed.
 *)
@@ -225,6 +230,24 @@ Proof. reflexivity. Qed.
     sets [Z] to [1] otherwise.  Use [test_ceval] to test your
     program. *)
 
+Definition peven : com :=
+  <{ Z := 0;
+    while (2 <= X)
+      do X := X - 2;
+        if (X = 1) then Z := 1
+        else skip end
+    end}>.
+
+Example peven_11:
+  test_ceval (X !-> 11) peven
+  = Some (1, 0, 1).
+Proof. reflexivity. Qed.
+
+Example peven_10:
+  test_ceval (X !-> 10) peven
+  = Some (0, 0, 0).
+Proof. reflexivity. Qed.
+    
 (* FILL IN HERE
 
     [] *)
@@ -360,7 +383,25 @@ Theorem ceval__ceval_step: forall c st st',
 Proof.
   intros c st st' Hce.
   induction Hce.
-  (* FILL IN HERE *) Admitted.
+  - exists 1. simpl. reflexivity.
+  - exists 2. simpl. rewrite H. reflexivity.
+  - destruct IHHce1. destruct IHHce2.
+    exists (S (x0 + x) ). destruct (S(x0 + x )) eqn: eqstep.
+    + discriminate eqstep.
+    + simpl in *. injection eqstep. intros.
+      apply ceval_step_more with (i2 := n) in H. rewrite H. 
+      apply ceval_step_more with (i2 := n) in H0. rewrite H0.
+      reflexivity. lia. lia.
+  - destruct IHHce. exists (S x). simpl. rewrite H. rewrite H0.
+    reflexivity.
+  - destruct IHHce. exists (S x). simpl. rewrite H. rewrite H0.
+    reflexivity.
+  - exists 1. simpl. rewrite H. reflexivity.
+  - destruct IHHce1. destruct IHHce2. 
+    exists (S (x0 + x)). simpl. rewrite H. apply ceval_step_more with (i2 := x0 + x) in H0. rewrite H0.
+    apply ceval_step_more with x0.
+    lia. assumption. lia.
+Qed.
 (** [] *)
 
 Theorem ceval_and_ceval_step_coincide: forall c st st',
