@@ -80,7 +80,7 @@ Qed.
 Example auto_example_1' : forall (P Q R: Prop),
   (P -> Q) -> (Q -> R) -> P -> R.
 Proof.
-  auto.
+  auto. Show Proof.
 Qed.
 
 (** The [auto] tactic solves goals that are solvable by any combination of
@@ -221,7 +221,7 @@ Hint Unfold is_fortytwo : core.
 Example auto_example_7' : forall x,
   (x <= 42 /\ 42 <= x) -> is_fortytwo x.
 Proof.
-  auto. (* try also: info_auto. *)
+  info_auto.
 Qed.
 
 (** Let's take a first pass over [ceval_deterministic] to simplify the
