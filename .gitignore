@@ -4,3 +4,5 @@
 *.vos
 *.vok
 *.glob
+
+*.lia.cache
