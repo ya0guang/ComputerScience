@@ -1872,9 +1872,24 @@ Definition p6 : com :=
 
 Theorem p5_p6_equiv : cequiv p5 p6.
 Proof.
-  unfold cequiv, p5, p6.
-  split; intros.
-  - induction H. 
+  unfold cequiv, p5, p6. remember p5.
+  split.
+  - intros H. inversion H.
+    + (* X = 1 *)
+      subst. inversion H4.
+      apply negb_false_iff in H1. Search ( _ =? _ = true).
+      apply beq_nat_true in H1.
+      assert ((X !-> 1; st') = st').
+      { apply functional_extensionality. unfold t_update.
+        intros. destruct (eqb_string X x) eqn: eqXx.
+        apply eqb_string_true_iff in eqXx.
+        subst. rewrite H1. reflexivity. reflexivity.}
+      rewrite <- H0 at 2. constructor. reflexivity.
+    + (* X != 1 *)
+      subst. inversion H2. apply negb_true_iff in H1.
+      apply beq_nat_false in H1.
+      
+  
     (* rewrite negb_false_iff in H6. Search ( _ =? _ = true). *)
     (* apply beq_nat_true in H6. *)
     (* assert ((X !-> 1; st') = st'). Search (t_update). *)
@@ -1921,6 +1936,15 @@ End Himp.
 
     (Hint: You'll need [functional_extensionality] for this one.) *)
 
+
+Lemma aeval_noninterfering: forall st l1 a1 a2,
+    var_not_used_in_aexp l1 a2 ->
+    aeval (l1 !-> aeval st a1; st) a2 = aeval st a2.
+Proof.
+  intros. induction H; try simpl; try rewrite IHvar_not_used_in_aexp1; try rewrite IHvar_not_used_in_aexp2; try reflexivity.
+  - simpl. unfold t_update. apply eqb_string_false_iff in H. rewrite H. reflexivity.
+Qed.
+
 Theorem swap_noninterfering_assignments: forall l1 l2 a1 a2,
   l1 <> l2 ->
   var_not_used_in_aexp l1 a2 ->
@@ -1929,7 +1953,28 @@ Theorem swap_noninterfering_assignments: forall l1 l2 a1 a2,
     <{ l1 := a1; l2 := a2 }>
     <{ l2 := a2; l1 := a1 }>.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros. unfold cequiv. split; intros.
+  inversion H2. inversion H8. inversion H5. subst.
+  - apply aeval_noninterfering with st l1 a1 a2 in H0. rewrite H0 in *.
+    apply E_Seq with (l2 !-> aeval st a2; st). apply E_Asgn. reflexivity.
+    assert ((l2 !-> aeval st a2; l1 !-> aeval st a1; st) = (l1 !-> aeval st a1; l2 !-> aeval st a2; st)).
+    { apply functional_extensionality. intros. unfold t_update.
+      destruct (eqb_string l2 x) eqn: l2x;
+      destruct (eqb_string l1 x) eqn: l1x; try reflexivity.
+      apply eqb_string_true_iff in l2x, l1x. subst. destruct H. reflexivity.
+    }
+    rewrite H3. apply E_Asgn. apply aeval_noninterfering. assumption.
+  - inversion H2. inversion H8. inversion H5. subst.
+    apply aeval_noninterfering with st l2 a2 a1 in H1.
+    apply E_Seq with (l1 !-> aeval st a1; st). constructor. reflexivity.
+    rewrite H1.
+    assert ((l1 !-> aeval st a1; l2 !-> aeval st a2; st) = (l2 !-> aeval st a2; l1 !-> aeval st a1; st)).
+    {apply functional_extensionality. intros. unfold t_update.
+     destruct (eqb_string l2 x) eqn: l2x;
+     destruct (eqb_string l1 x) eqn: l1x; try reflexivity.
+     apply eqb_string_true_iff in l2x, l1x. subst. destruct H. reflexivity. }
+    rewrite H3. constructor. apply aeval_noninterfering. assumption.
+Qed.    
 
 (** [] *)
 
@@ -1959,31 +2004,62 @@ Definition capprox (c1 c2 : com) : Prop := forall (st st' : state),
 (** Find two programs [c3] and [c4] such that neither approximates
     the other. *)
 
-Definition c3 : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-Definition c4 : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition c3 : com :=
+  <{X := 3}>.
+
+Definition c4 : com :=
+  <{X := 4}>.
 
 Theorem c3_c4_different : ~ capprox c3 c4 /\ ~ capprox c4 c3.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  unfold not. unfold capprox, c3, c4.
+  remember empty_st as st.
+  remember ( X!->3; st) as st3. remember ( X !-> 4; st) as st4.
+  assert (st =[ X:=3 ]=> st3).
+  { rewrite Heqst3, Heqst. constructor. reflexivity. }
+  assert (st =[ X:= 4 ]=> st4).
+  { rewrite Heqst4, Heqst. constructor. reflexivity. }
+  split; intros.
+  - apply H1 in H. inversion H. inversion H0.
+    assert ((st3 X) = 3).
+    { subst. apply t_update_eq. }
+    assert ((st4 X) = 4).
+    { subst. apply t_update_eq. }
+    subst. rewrite H5 in H10. rewrite <- H10 in H13. rewrite t_update_eq in H13.
+    inversion H13.
+  - apply H1 in H0. inversion H. inversion H0.
+    assert ((st3 X) = 3).
+    { subst. apply t_update_eq. }
+    assert ((st4 X) = 4).
+    { subst. apply t_update_eq. }
+    subst.
+    rewrite  H5 in H10. rewrite H10 in H12. rewrite t_update_eq in H12.
+    inversion H12.
+Qed.
 
 (** Find a program [cmin] that approximates every other program. *)
 
-Definition cmin : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition cmin : com :=
+  <{while true do skip end}>.
 
 Theorem cmin_minimal : forall c, capprox cmin c.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  intros. unfold capprox, cmin. intros. apply while_true_nonterm in H.
+  destruct H. unfold bequiv. reflexivity.
+Qed.
 
 (** Finally, find a non-trivial property which is preserved by
     program approximation (when going from left to right). *)
 
-Definition zprop (c : com) : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition zprop (c : com) : Prop :=
+  exists st st' x v, st =[ c ]=> st' -> st' x = v.
 
 Theorem zprop_preserving : forall c c',
-  zprop c -> capprox c c' -> zprop c'.
-Proof. (* FILL IN HERE *) Admitted.
-(** [] *)
+  zprop c -> capprox c' c -> zprop c'.
+Proof.
+  unfold zprop, capprox. intros.
+  destruct H. destruct H. destruct H. destruct H.
+  exists x, x0, x1, x2. intros. apply H. apply H0 in H1. assumption.
+Qed.
 
 (* 2021-08-11 15:11 *)
