@@ -742,7 +742,7 @@ Proof.
   { unfold cequiv. intros.
     inversion H1. subst.
     apply E_Seq with st'0. apply H. assumption.
-    apply H0. assumption.}
+    apply H0. assumption. }
   intros. split; intros.
   - apply A with c1 c2; repeat assumption.
   - apply A with c1' c2'; repeat (apply sym_cequiv; assumption).
@@ -1667,7 +1667,7 @@ Proof.
       destruct (eqb_string Y x) eqn: eqYx;
         destruct (eqb_string X x) eqn: eqXx;
         try reflexivity.
-      rewrite eqb_string_true_iff in *. subst. discriminate eqXx.}
+      rewrite eqb_string_true_iff in *. subst. discriminate eqXx. }
     rewrite Ha. constructor.
   - intros. inversion H. inversion H2. inversion H5. subst.
     apply E_Seq with (X !-> n0; st). constructor.
@@ -1705,11 +1705,11 @@ Proof.
   assert (H2 : empty_st =[ pcopy ]=> (Y !-> 1; X !-> 2)).
   { unfold pcopy. apply contra in H1. assumption. }
   assert (H3 : empty_st =[ pcopy ]=> (Y !-> 1; X !-> 1)).
-  { unfold pcopy. apply E_Seq with (X !-> 1). constructor. constructor. reflexivity.}
+  { unfold pcopy. apply E_Seq with (X !-> 1). constructor. constructor. reflexivity. }
   inversion H1. inversion H2. subst.
   inversion H4. inversion H7. subst.
   inversion H10. inversion H13. subst.
-  assert (Hx: (X !-> n1) X = n1). {reflexivity.}
+  assert (Hx: (X !-> n1) X = n1). {reflexivity. }
   simpl in *. rewrite Hx in H14.
   remember (Y !-> n1; X !-> n1) as stn.
   remember (Y !-> 1; X !-> 2) as st.
@@ -1883,7 +1883,7 @@ Proof.
       { apply functional_extensionality. unfold t_update.
         intros. destruct (eqb_string X x) eqn: eqXx.
         apply eqb_string_true_iff in eqXx.
-        subst. rewrite H1. reflexivity. reflexivity.}
+        subst. rewrite H1. reflexivity. reflexivity. }
       rewrite <- H0 at 2. constructor. reflexivity.
     + (* X != 1 *)
       subst. inversion H2. apply negb_true_iff in H1.
