@@ -238,7 +238,13 @@ Qed.
 Theorem provable_true_post : forall c P,
     derivable P c True.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction c; intros.
+  - eapply H_Consequence_pre. constructor. auto.
+  - eapply H_Consequence_pre. constructor. auto.
+  - eapply H_Consequence_pre. eapply H_Seq. eapply IHc1. eapply IHc2. eauto.
+  - eapply H_Consequence_pre. econstructor. apply IHc1. apply IHc2. eauto.
+  - eapply H_Consequence. eapply H_While. apply IHc. auto. auto.
+Qed.
 
 (** [] *)
 
@@ -250,7 +256,16 @@ Proof.
 Theorem provable_false_pre : forall c Q,
     derivable False c Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction c; intros.
+  - eapply H_Consequence_pre. constructor. intros. inversion H.
+  - eapply H_Consequence_pre. constructor. intros. inversion H.
+  - eapply H_Consequence_pre. econstructor. apply IHc1. apply IHc2. auto.
+  - eapply H_If. eapply H_Consequence_pre. apply IHc1. intros. destruct H. auto.
+    eapply H_Consequence_pre. apply IHc2. intros. destruct H. auto.
+  - eapply H_Consequence_post. eapply H_While. eapply H_Consequence_pre. apply IHc.
+    intros. destruct H. auto.
+    intros. inversion H. destruct H0.
+Qed.
 
 (** [] *)
 
@@ -288,7 +303,22 @@ Proof.
 Theorem hoare_sound : forall P c Q,
   derivable P c Q -> valid P c Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold valid. intros P c Q H. induction H; intros.
+  - inversion H. rewrite <- H3. auto.
+  - inversion H. subst. assumption.
+  - inversion H1. subst. apply IHderivable1 in H5. apply IHderivable2 in H8.
+    assumption. assumption. assumption.
+  - inversion H1; subst.
+    + apply IHderivable1 in H9. assumption. split. assumption. apply H8.
+    + apply IHderivable2 in H9. assumption. split. assumption. unfold not. intros.
+      inversion H3. rewrite H8 in H5. inversion H5.
+  - remember <{while b do c end}>. induction H0; inversion Heqc0.
+    + split. assumption. subst. unfold not. intros. inversion H2. rewrite H0 in H4. inversion H4.
+    + subst. apply IHceval2. reflexivity. eapply IHderivable. eauto.
+      split. assumption. simpl. assumption.
+  - eapply q. eapply IHderivable. eauto. eapply p. assumption.
+Qed.
+
 (** [] *)
 
 (** The proof of completeness is more challenging.  To carry out the
@@ -313,7 +343,8 @@ Hint Unfold wp : core.
 
 Theorem wp_is_precondition : forall c Q,
   {{wp c Q}} c {{Q}}.
-Proof. auto. Qed.
+Proof.
+  auto. Qed.
 
 Theorem wp_is_weakest : forall c Q P',
     {{P'}} c {{Q}} ->
@@ -333,8 +364,8 @@ Proof. eauto. Qed.
 Lemma wp_seq : forall P Q c1 c2,
     derivable P c1 (wp c2 Q) -> derivable (wp c2 Q) c2 Q -> derivable P <{c1; c2}> Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
-
+  intros. econstructor. apply X. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard (wp_invariant) *)
@@ -346,8 +377,10 @@ Proof.
 Lemma wp_invariant : forall b c Q,
     valid (wp <{while b do c end}> Q /\ b) c (wp <{while b do c end}> Q).
 Proof.
-  (* FILL IN HERE *) Admitted.
-
+  unfold valid, wp. intros. destruct H0.
+  apply H0. eapply E_WhileTrue. inversion H2. auto. apply H.
+  assumption.
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, standard (hoare_complete) *)
@@ -368,7 +401,25 @@ Theorem hoare_complete: forall P c Q,
 Proof.
   unfold valid. intros P c. generalize dependent P.
   induction c; intros P Q HT.
-  (* FILL IN HERE *) Admitted.
+  - eapply H_Consequence_pre. constructor. intros. specialize HT with (st := st) (st':= st).
+    apply HT. constructor. assumption.
+  - eapply H_Consequence_pre. constructor. intros. unfold assn_sub.
+    specialize HT with st (x !-> aeval st a; st). apply HT; auto.
+  - apply H_Seq with (Q := wp c2 Q). apply IHc1. intros. unfold wp. intros.
+    specialize HT with st s'. apply HT. eapply E_Seq. exact H. assumption. assumption.
+    apply IHc2. intros. auto.
+  - apply H_If. apply IHc1. intros. eapply HT. constructor. destruct H0. inversion b0. reflexivity.
+    assumption. destruct H0. auto.
+    apply IHc2. intros. eapply HT with st. destruct H0. apply E_IfFalse. unfold not in H1. simpl in H1.
+    destruct (beval st b) eqn: eqb. assert (true = true). reflexivity. apply H1 in H2. inversion H2.
+    reflexivity. assumption. destruct H0. assumption.
+  - fold (valid P <{while b do c end}> Q) in HT. eapply H_Consequence with (P':= wp <{while b do c end}> Q).
+    constructor. apply IHc. fold (valid (wp <{while b do c end}> Q /\ b) c (wp <{while b do c end}> Q) ).
+    apply wp_invariant. intros. unfold valid in HT. unfold wp. intros. eapply HT. exact H0. assumption.
+    intros.  inversion H. unfold wp in H0. apply H0. apply E_WhileFalse. inversion H. unfold not in H3.
+    simpl in H3. destruct (beval st b) eqn: eqb. assert (true = true). auto. apply H3 in H4. destruct  H4.
+    reflexivity.
+Qed.
 
 (** [] *)
 
