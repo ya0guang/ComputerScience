@@ -183,7 +183,14 @@ Hint Unfold stuck : core.
 Example some_term_is_stuck :
   exists t, stuck t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  exists (iszro fls). unfold stuck.
+  split.
+  - unfold step_normal_form. unfold not. intros.
+    inversion H. inversion H0. inversion H2.
+  - intros H. unfold value in H. inversion H.
+    + inversion H0.
+    + inversion H0.
+Qed.
 (** [] *)
 
 (** However, although values and normal forms are _not_ the same in
@@ -195,7 +202,13 @@ Proof.
 Lemma value_is_nf : forall t,
   value t -> step_normal_form t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold step_normal_form, not. intros. inversion H.
+  - inversion H1. inversion H0. subst. inversion H3.  inversion H0. subst. inversion H3.
+  - induction t; try inversion H1; inversion H0.
+    + inversion H2.
+    + subst. apply IHt. unfold value. right. assumption. inversion H4. subst.
+      exists t1'. assumption. assumption.
+Qed.
 
 (** (Hint: You will reach a point in this proof where you need to
     use an induction to reason about a term that is known to be a
@@ -215,7 +228,33 @@ Proof.
 Theorem step_deterministic:
   deterministic step.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  unfold deterministic. 
+  intros. generalize dependent y2. induction H; intros; inversion H0;
+    try reflexivity; subst; try inversion H4.
+  - inversion H.
+  - inversion H.
+  - apply IHstep in H5. subst. reflexivity.
+  - apply IHstep in H2. subst. reflexivity.
+  - inversion H1.
+  - assert (value (scc v)). unfold value. right. constructor. assumption.
+    apply value_is_nf in H1. unfold step_normal_form, not in H1.
+    exfalso. apply H1. exists t1'. assumption.
+  - inversion H.
+  - assert (value (scc y2)). unfold value. right. constructor. assumption.
+    apply value_is_nf in H1. unfold step_normal_form, not in H1.
+    exfalso. apply H1. exists t1'. assumption.
+  - apply IHstep in H2. subst. reflexivity.
+  - inversion H1.
+  - assert (value (scc v)). unfold value. right. constructor. assumption.
+    apply value_is_nf in H1. unfold step_normal_form, not in H1.
+    exfalso. apply H1. exists t1'. assumption.
+  - inversion H.
+  - assert (value (scc v)). unfold value. right. constructor. assumption.
+    apply value_is_nf in H1. unfold step_normal_form, not in H1.
+    exfalso. apply H1. exists t1'. assumption.
+  - apply IHstep in H2. subst. reflexivity.
+Qed.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -322,7 +361,9 @@ Example scc_hastype_nat__hastype_nat : forall t,
   |- scc t \in Nat ->
   |- t \in Nat.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. inversion H. assumption.
+Qed.
+
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -382,7 +423,19 @@ Proof.
     + (* t1 can take a step *)
       destruct H as [t1' H1].
       exists (test t1' t2 t3). auto.
-  (* FILL IN HERE *) Admitted.
+  - destruct IHHT.
+    + left. unfold value. right. constructor. apply nat_canonical in H; assumption.
+    + inversion H. right. exists (scc x). constructor. assumption.
+  - destruct IHHT.
+    + right. apply nat_canonical in H. inversion H. exists zro. constructor.
+      exists t. constructor. assumption. assumption.
+    + right. destruct H. exists (prd x). constructor. assumption.
+  - right. destruct IHHT.
+    + apply nat_canonical in H. inversion H. exists tru. constructor.
+      exists fls. constructor. assumption. assumption.
+    + destruct H. exists (iszro x). constructor. assumption.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (finish_progress_informal)
@@ -427,6 +480,18 @@ Definition manual_grade_for_finish_progress_informal : option (nat*string) := No
 (** The second critical property of typing is that, when a well-typed
     term takes a step, the result is a well-typed term (of the same type). *)
 
+Lemma nvalue_is_nat: forall t, nvalue t -> |- t \in Nat.
+Proof.
+  intros. induction H.
+  - constructor.
+  - constructor. assumption.
+Qed.
+
+Lemma bvalue_is_bool : forall t, bvalue t -> |- t \in Bool.
+Proof.
+  intros. induction H; constructor.
+Qed.
+
 (** **** Exercise: 2 stars, standard (finish_preservation) *)
 Theorem preservation : forall t t' T,
   |- t \in T ->
@@ -451,7 +516,12 @@ Proof.
       + (* ST_TestFls *) assumption.
       + (* ST_Test *) apply T_Test; try assumption.
         apply IHHT1; assumption.
-    (* FILL IN HERE *) Admitted.
+    - inversion HE. subst. constructor. apply IHHT. assumption.
+    - inversion HE; subst. constructor. apply nvalue_is_nat in H0. assumption.
+      constructor. apply IHHT. assumption.
+    - inversion HE; try constructor.
+      apply IHHT. assumption.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (finish_preservation_informal)
@@ -502,7 +572,19 @@ Theorem preservation' : forall t t' T,
   t --> t' ->
   |- t' \in T.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  intros. generalize dependent T. induction H0; intros.
+  - inversion H. subst. assumption.
+  - inversion H. subst. assumption.
+  - inversion H. subst. apply IHstep in H4. constructor; assumption.
+  - inversion H. constructor. apply IHstep. assumption.
+  - inversion H. constructor.
+  - inversion H0. subst. inversion H2. assumption.
+  - inversion H. subst. constructor. apply IHstep. assumption.
+  - inversion H. constructor.
+  - inversion H0. constructor.
+  - inversion H. constructor. apply IHstep. assumption.
+Qed.
+
 (** [] *)
 
 (** The preservation theorem is often called _subject reduction_,
@@ -544,8 +626,14 @@ Qed.
     not, give a counter-example.  (You do not need to prove your
     counter-example in Coq, but feel free to do so.)
 
-    (* FILL IN HERE *)
-*)
+ (* FILL IN HERE *)
+
+NO!!
+
+We can have (test tru tru 5).
+ *)
+
+
 (* Do not modify the following line: *)
 Definition manual_grade_for_subject_expansion : option (nat*string) := None.
 (** [] *)
@@ -564,9 +652,13 @@ Definition manual_grade_for_subject_expansion : option (nat*string) := None.
    counterexample.
       - Determinism of [step]
             (* FILL IN HERE *)
+            remains true
       - Progress
+            becomes false
+            (scc tru) cannot progress, no rule corresponds to (scc true) in ST
             (* FILL IN HERE *)
       - Preservation
+            remains true
             (* FILL IN HERE *)
 *)
 (* Do not modify the following line: *)
@@ -582,6 +674,7 @@ Definition manual_grade_for_variation1 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
+            determinism
             (* FILL IN HERE *)
 *)
 (* Do not modify the following line: *)
@@ -598,6 +691,8 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
+            determinism (two branches for test tru t2 t3)
+            
             (* FILL IN HERE *)
 *)
 (** [] *)
@@ -611,6 +706,8 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
+           Seems like nothing changes, since (prd fls) has no type
+           
 (* FILL IN HERE *)
 *)
 (** [] *)
@@ -624,7 +721,9 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
-(* FILL IN HERE *)
+ (* FILL IN HERE *)
+            preservation changes: (prd (scc zro))
+            
 *)
 (** [] *)
 
@@ -637,7 +736,10 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
-(* FILL IN HERE *)
+ (* FILL IN HERE *)
+            progress fails: (prd zro) has type but cannot prgress
+            preservation also failes (prd (prd (scc zro)))
+            
 *)
 (** [] *)
 
@@ -659,6 +761,8 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
     be undefined, rather than being defined to be [zro].  Can we
     achieve this simply by removing the rule from the definition of
     [step]?  Would doing so create any problems elsewhere?
+
+       (prd zro) type checks but stuck
 
 (* FILL IN HERE *)
 *)
