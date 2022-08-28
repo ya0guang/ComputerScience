@@ -145,7 +145,19 @@ Theorem progress' : forall t T,
 Proof.
   intros t.
   induction t; intros T Ht; auto.
-  (* FILL IN HERE *) Admitted.
+  - inversion Ht. discriminate H1.
+  - right. inversion Ht. subst.
+    destruct IHt1 with (Ty_Arrow T2 T). assumption.
+    + destruct IHt2 with T2. assumption.
+      * eapply canonical_forms_fun in H2. destruct H2. destruct H1. subst.
+        exists (<{ [x0:=t2]x1 }>). auto. assumption.
+      * destruct H0. exists (<{t1 x0}>). auto.
+    + destruct H. exists (<{x0 t2}>). auto.
+  - inversion Ht. subst. destruct IHt1 with Ty_Bool. assumption.
+    + right. destruct (canonical_forms_bool t1); try assumption; subst; eauto.
+    + inversion H. right. exists (<{if x0 then t2 else t3}>). auto.
+Qed.
+
 (** [] *)
 
 (* ################################################################# *)
@@ -194,6 +206,10 @@ Lemma weakening : forall Gamma Gamma' t T,
 Proof.
   intros Gamma Gamma' t T H Ht.
   generalize dependent Gamma'.
+  (* How eauto works in this region? *)
+  (* induction Ht. *)
+  (* - intros. Search (inclusion). constructor. apply H0. assumption. *)
+  (* - intros. constructor. eapply IHHt. apply inclusion_update. assumption. *)
   induction Ht; eauto using inclusion_update.
 Qed.
 
@@ -204,7 +220,7 @@ Lemma weakening_empty : forall Gamma t T,
      Gamma |- t \in T.
 Proof.
   intros Gamma t T.
-  eapply weakening.
+  eapply weakening. intros.
   discriminate.
 Qed.
 
@@ -332,7 +348,16 @@ Proof.
   remember (x |-> U; Gamma) as Gamma'.
   generalize dependent Gamma.
   induction Ht; intros Gamma' G; simpl; eauto.
- (* FILL IN HERE *) Admitted.
+  - destruct (eqb_stringP x x0); subst.
+    + apply weakening_empty.
+      rewrite update_eq in H. inversion H. subst. assumption.
+    + rewrite update_neq in H. constructor. assumption. assumption.
+  - destruct (eqb_stringP x x0); subst.
+    + constructor. rewrite update_shadow in Ht. assumption.
+    + constructor. apply IHHt. rewrite update_permute.
+      reflexivity. assumption.
+Qed.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -418,6 +443,8 @@ Qed.
     You can state your counterexample informally in words, with a brief
     explanation. *)
 
+(* for if case, the expression may not be well typed and t2/t3 can be of different types *)
+
 (* FILL IN HERE *)
 
 (* Do not modify the following line: *)
@@ -443,7 +470,11 @@ Proof.
   intros t t' T Hhas_type Hmulti. unfold stuck.
   intros [Hnf Hnot_val]. unfold normal_form in Hnf.
   induction Hmulti.
-  (* FILL IN HERE *) Admitted.
+  (* - inversion Hhas_type; subst. *)
+  (*   apply Hnot_val. discriminate. *)
+  - apply progress in Hhas_type. destruct Hhas_type; eauto.
+  - eapply preservation in Hhas_type; eauto.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -459,7 +490,17 @@ Theorem unique_types : forall Gamma e T T',
   Gamma |- e \in T' ->
   T = T'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. generalize dependent T'.
+  induction H; intros.
+  - inversion H0. subst. rewrite H in H3. injection H3. auto.
+  - inversion H0; subst. apply IHhas_type in H6. subst. auto.
+  - inversion H1; subst. apply IHhas_type2 in H7.
+    apply IHhas_type1 in H5. subst. inversion H5. auto.
+  - inversion H0. auto.
+  - inversion H0. auto.
+  - inversion H2; subst. apply IHhas_type2 in H9. assumption.
+Qed.
+
 (** [] *)
 
 (* ################################################################# *)
@@ -586,8 +627,11 @@ Proof.
   intros x t T Gamma H H0. generalize dependent Gamma.
   generalize dependent T.
   induction H;
-         intros; try solve [inversion H0; eauto].
-  (* FILL IN HERE *) Admitted.
+    intros; try solve [inversion H0; eauto].
+  inversion H1. subst. apply IHappears_free_in in H7.
+  rewrite update_neq in H7; assumption.
+Qed.
+
 (** [] *)
 
 (** From the [free_in_context] lemma, it immediately follows that any
@@ -599,7 +643,11 @@ Corollary typable_empty__closed : forall t T,
     empty |- t \in T  ->
     closed t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold closed. intros. intros Contra.
+  apply free_in_context with (T:=T) (Gamma:= empty) in Contra.
+  destruct Contra. inversion H0. assumption.
+Qed.
+
 (** [] *)
 
 (** Finally, we establish _context_invariance_.  It is useful in cases
@@ -661,7 +709,15 @@ Proof.
   intros.
   generalize dependent Gamma'.
   induction H; intros; auto.
-  (* FILL IN HERE *) Admitted.
+  - assert (Gamma x0 = Gamma' x0). apply H0. constructor. constructor.
+    rewrite <- H1. assumption.
+  - constructor. apply IHhas_type. intros. destruct (eqb_stringP x0 x1); subst.
+    + repeat rewrite update_eq. reflexivity.
+    + repeat rewrite update_neq; try apply H0. constructor; assumption. assumption. assumption.
+  - econstructor. apply IHhas_type1. intros. apply H1. constructor. assumption.
+    apply IHhas_type2. intros. apply H1. apply afi_app2. auto.
+Qed.
+
 (** [] *)
 
 (** The context invariance lemma can actually be used in place of the
@@ -702,11 +758,11 @@ and the following typing rule:
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
-      - Progress
-(* FILL IN HERE *)
+(* FILL IN HERE *) false: any step can zap
+      - Progress 
+(* FILL IN HERE *) true: any term can zap (even for zap!)
       - Preservation
-(* FILL IN HERE *)
+(* FILL IN HERE *) false: what's the type of zap? a Bool type can result in T
 *)
 
 (* Do not modify the following line: *)
@@ -730,11 +786,11 @@ Definition manual_grade_for_stlc_variation1 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+(* FILL IN HERE *) false. abs can deviate to foo
       - Progress
-(* FILL IN HERE *)
+(* FILL IN HERE *) true 
       - Preservation
-(* FILL IN HERE *)
+(* FILL IN HERE *) false. type of abs can go to bool
 *)
 
 (* Do not modify the following line: *)
@@ -750,11 +806,11 @@ Definition manual_grade_for_stlc_variation2 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+(* FILL IN HERE *) true
       - Progress
-(* FILL IN HERE *)
+(* FILL IN HERE *) false: st_app1 cannot progress
       - Preservation
-(* FILL IN HERE *)
+(* FILL IN HERE *) true
 *)
 
 (* Do not modify the following line: *)
@@ -775,11 +831,11 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+(* FILL IN HERE *) false, if true ... may deviate
       - Progress
-(* FILL IN HERE *)
+(* FILL IN HERE *) true
       - Preservation
-(* FILL IN HERE *)
+(* FILL IN HERE *) false
 *)
 (** [] *)
 
@@ -799,11 +855,11 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+(* FILL IN HERE *) true
       - Progress
-(* FILL IN HERE *)
+(* FILL IN HERE *) true?
       - Preservation
-(* FILL IN HERE *)
+(* FILL IN HERE *) false
 *)
 (** [] *)
 
@@ -823,11 +879,11 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+(* FILL IN HERE *) true
       - Progress
-(* FILL IN HERE *)
+(* FILL IN HERE *) true?
       - Preservation
-(* FILL IN HERE *)
+(* FILL IN HERE *) false
 *)
 (** [] *)
 
@@ -845,11 +901,11 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+(* FILL IN HERE *) true
       - Progress
-(* FILL IN HERE *)
+(* FILL IN HERE *) true?
       - Preservation
-(* FILL IN HERE *)
+(* FILL IN HERE *) false
 *)
 (** [] *)
 
@@ -952,10 +1008,33 @@ Coercion tm_const : nat >-> tm.
         STLC to deal with the new syntactic forms. Make sure Coq
         accepts the whole file. *)
 
+Reserved Notation "'[' x ':=' s ']' t" (in custom stlc at level 20, x constr).
+
+Fixpoint substa (x : string) (s : tm) (t : tm) : tm :=
+  match t with
+  | tm_var y =>
+      if eqb_string x y then s else t
+  | tm_const n => n
+  | <{succ y}> => <{succ [x:=s] y}>
+  | <{pred y}> => <{pred [x:=s] y}>
+  | <{ x1 * x2 }> => <{([x:=s] x1) * ([x:=s] x2)}>
+  | <{\y:T, t1}> =>
+      if eqb_string x y then t else <{\y:T, [x:=s] t1}>
+  | <{t1 t2}> =>
+      <{([x:=s] t1) ([x:=s] t2)}>
+  | <{if0 t1 then t2 else t3}> =>
+      <{if0 ([x:=s] t1) then ([x:=s] t2) else ([x:=s] t3)}>
+  end
+
+where "'[' x ':=' s ']' t" := (substa x s t) (in custom stlc).
+
+
+
 (* FILL IN HERE *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_stlc_arith : option (nat*string) := None.
+
 (** [] *)
 
 End STLCArith.
