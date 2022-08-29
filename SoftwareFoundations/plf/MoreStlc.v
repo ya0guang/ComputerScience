@@ -561,7 +561,9 @@ From PLF Require Import Stlc.
                            Gamma |- t1 \in T1->T1
                            ----------------------                    (T_Fix)
                            Gamma |- fix t1 \in T1
-*)
+ *)
+
+(* why fix t1 is of T1??? isn't it still T1->T1??? *)
 
 (** Let's see how [ST_FixAbs] works by reducing [fact 3 = fix F 3],
     where
@@ -659,7 +661,11 @@ From PLF Require Import Stlc.
            else if (pred x)=0 then 0
            else 1 + (halve (pred (pred x)))
 
-    (* FILL IN HERE *)
+ (* FILL IN HERE *)
+
+fix \xf. \x if x=0 then 0 else if (pred x) = 0 then 0 else 1 + (xf (pred (pred x)))
+
+
 *)
 (** [] *)
 
@@ -1082,6 +1088,8 @@ Notation "'fix' t" := (tm_fix t) (in custom stlc at level 0).
 (** *** Substitution *)
 
 Reserved Notation "'[' x ':=' s ']' t" (in custom stlc at level 20, x constr).
+
+
 Fixpoint subst (x : string) (s : tm) (t : tm) : tm :=
   match t with
   (* pure STLC *)
@@ -1126,16 +1134,18 @@ Fixpoint subst (x : string) (s : tm) (t : tm) : tm :=
               else <{ [x:=s] t3 }> } }>
   (* unit *)
   | <{unit}> => <{unit}>
-
   (* Complete the following cases. *)
-
   (* pairs *)
-  (* FILL IN HERE *)
+  | <{(t1, t2)}> => <{([x:=s]t1, [x:=s]t2)}>
+  | <{t.fst}> => <{([x:=s]t).fst }>
+  | <{t.snd}> => <{([x:=s]t).snd}>
   (* let *)
-  (* FILL IN HERE *)
+  (* may need to check string eq of y and x *)
+  | <{let y = t1 in t2}> =>
+      if eqb_string x y then <{let y = [x:=s]t1 in t2}> else
+      <{let y = [x:=s]t1 in [x:=s]t2}>
   (* fix *)
-  (* FILL IN HERE *)
-  | _ => t  (* ... and delete this line when you finish the exercise *)
+  | <{fix t'}> => <{fix [x:=s]t'}>
   end
 
 where "'[' x ':=' s ']' t" := (subst x s t) (in custom stlc).
@@ -1247,19 +1257,48 @@ Inductive step : tm -> tm -> Prop :=
        <{case t1' of | nil => t2 | x1 :: x2 => t3}>
   | ST_LcaseNil : forall T1 t2 x1 x2 t3,
        <{case nil T1 of | nil => t2 | x1 :: x2 => t3}> --> t2
-  | ST_LcaseCons : forall v1 vl t2 x1 x2 t3,
-       value v1 ->
-       value vl ->
-       <{case v1 :: vl of | nil => t2 | x1 :: x2 => t3}>
-         -->  <{ [x2 := vl] ([x1 := v1] t3) }>
+| ST_LcaseCons : forall v1 vl t2 x1 x2 t3,
+    value v1 ->
+    value vl ->
+    <{case v1 :: vl of | nil => t2 | x1 :: x2 => t3}>
+      -->  <{ [x2 := vl] ([x1 := v1] t3) }>
 
-  (* Add rules for the following extensions. *)
+(* Add rules for the following extensions. *)
 
-  (* pairs *)
-  (* FILL IN HERE *)
-  (* let *)
-  (* FILL IN HERE *)
-  (* fix *)
+(* pairs *)
+| ST_Pair1 : forall t1 t2 t1',
+    t1 --> t1' ->
+    <{(t1, t2)}> --> <{(t1', t2)}>
+| ST_Pair2 : forall t1 t2 t2',
+    t2 --> t2' ->
+    <{(t1, t2)}> --> <{(t1, t2')}>
+| ST_Fst1 : forall t1 t1',
+    t1 --> t1' ->
+    <{t1.fst}> --> <{t1'.fst}>
+| ST_FstPair : forall v1 v2,
+    value v1 ->
+    value v2 ->
+    <{(v1, v2).fst}> --> <{v1}>
+| ST_Snd1 : forall t1 t1',
+    t1 --> t1' ->
+    <{t1.snd}> --> <{t1'.snd}>
+| ST_SndPair : forall v1 v2,
+    value v1 ->
+    value v2 ->
+    <{(v1, v2).snd}> --> <{v2}>
+(* let *)
+| ST_Let1 : forall t1 t1' x t2,
+    t1 --> t1' ->
+    <{let x=t1 in t2}> --> <{let x=t1' in t2}>
+| ST_LetValue : forall x v t,
+    <{let x=v in t}> --> <{[x:=v]t}>
+(* fix *)
+| ST_Fix1 : forall t t',
+    t --> t' ->
+    <{fix t}> --> <{fix t'}>
+| ST_FixAbs : forall T t xf,
+    <{fix (\xf:T, t)}> --> <{[xf:=fix (\xf:T, t)]t}>
+    
   (* FILL IN HERE *)
 
   where "t '-->' t'" := (step t t').
@@ -1339,11 +1378,26 @@ Inductive has_type : context -> tm -> ty -> Prop :=
 
   (* Add rules for the following extensions. *)
 
-  (* pairs *)
-  (* FILL IN HERE *)
+(* pairs *)
+| T_Pair : forall Gamma t1 t2 T1 T2,
+    Gamma |- t1 \in T1 ->
+    Gamma |- t2 \in T2 ->
+    Gamma |- (t1, t2) \in (T1 * T2)
+| T_Fst : forall Gamma t T1 T2,
+    Gamma |- t \in (T1 * T2) ->
+                  Gamma |- t.fst \in T1
+| T_Snd : forall Gamma t T1 T2,
+    Gamma |- t \in (T1 * T2) ->
+                  Gamma |- t.snd \in T2
   (* let *)
-  (* FILL IN HERE *)
-  (* fix *)
+| T_Let : forall Gamma t1 t2 T1 T2 x,
+    Gamma |- t1 \in T1 ->
+    (x |-> T1; Gamma) |- t2 \in T2 ->
+    Gamma |- let x=t1 in t2 \in T2
+(* fix *)
+| T_Fix : forall Gamma t1 T1,
+    Gamma |- t1 \in (T1 -> T1) ->
+                   Gamma |- fix t1 \in T1
   (* FILL IN HERE *)
 
 where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
@@ -1445,16 +1499,14 @@ Proof.
   (* This typing derivation is quite deep, so we need
      to increase the max search depth of [auto] from the
      default 5 to 10. *)
-  auto 10.
-(* FILL IN HERE *) Admitted.
+  auto 10. Qed.
 
 Example numtest_reduces :
   test -->* 5.
 Proof.
-(* 
+
   unfold test. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 
 End Numtest.
 
@@ -1469,16 +1521,14 @@ Definition test :=
 
 Example typechecks :
   empty |- test \in Nat.
-Proof. unfold test. eauto 15. (* FILL IN HERE *) Admitted.
+Proof. unfold test. eauto 15. Qed.
 (* GRADE_THEOREM 0.25: typechecks *)
 
 Example reduces :
   test -->* 6.
 Proof.
-(* 
   unfold test. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 (* GRADE_THEOREM 0.25: reduces *)
 
 End Prodtest.
@@ -1495,16 +1545,14 @@ Definition test :=
 
 Example typechecks :
   empty |- test \in Nat.
-Proof. unfold test. eauto 15. (* FILL IN HERE *) Admitted.
+Proof. unfold test. eauto 15. Qed.
 (* GRADE_THEOREM 0.25: typechecks *)
 
 Example reduces :
   test -->* 6.
 Proof.
-(* 
   unfold test. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 (* GRADE_THEOREM 0.25: reduces *)
 
 End LetTest.
@@ -1525,15 +1573,14 @@ Definition test :=
 
 Example typechecks :
   empty |- test \in Nat.
-Proof. unfold test. eauto 15. (* FILL IN HERE *) Admitted.
+Proof. unfold test. eauto 15. Qed.
 
 Example reduces :
   test -->* 5.
 Proof.
-(* 
+
   unfold test. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 
 End Sumtest1.
 
@@ -1556,15 +1603,14 @@ Definition test :=
 
 Example typechecks :
   empty |- test \in (Nat * Nat).
-Proof. unfold test. eauto 15. (* FILL IN HERE *) Admitted.
+Proof. unfold test. eauto 15. Qed.
 
 Example reduces :
   test -->* <{(5, 0)}>.
 Proof.
-(* 
+
   unfold test. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 
 End Sumtest2.
 
@@ -1586,15 +1632,14 @@ Definition test :=
 
 Example typechecks :
   empty |- test \in Nat.
-Proof. unfold test. eauto 20. (* FILL IN HERE *) Admitted.
+Proof. unfold test. eauto 20. Qed.
 
 Example reduces :
   test -->* 25.
 Proof.
-(* 
+
   unfold test. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 
 End ListTest.
 
@@ -1618,16 +1663,15 @@ Definition fact :=
 
 Example typechecks :
   empty |- fact \in (Nat -> Nat).
-Proof. unfold fact. auto 10. (* FILL IN HERE *) Admitted.
+Proof. unfold fact. auto 10. Show Proof. Qed.
 (* GRADE_THEOREM 0.25: typechecks *)
 
 Example reduces :
   <{fact 4}> -->* 24.
 Proof.
-(* 
+
   unfold fact. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 (* GRADE_THEOREM 0.25: reduces *)
 
 End FixTest1.
@@ -1654,17 +1698,16 @@ Definition map :=
 Example typechecks :
   empty |- map \in
     ((Nat -> Nat) -> ((List Nat) -> (List Nat))).
-Proof. unfold map. auto 10. (* FILL IN HERE *) Admitted.
+Proof. unfold map. auto 10. Qed.
 (* GRADE_THEOREM 0.25: typechecks *)
 
 Example reduces :
   <{map (\a:Nat, succ a) (1 :: 2 :: (nil Nat))}>
   -->* <{2 :: 3 :: (nil Nat)}>.
 Proof.
-(* 
+
   unfold map. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 (* GRADE_THEOREM 0.25: reduces *)
 
 End FixTest2.
@@ -1690,25 +1733,24 @@ Definition equal :=
 
 Example typechecks :
   empty |- equal \in (Nat -> Nat -> Nat).
-Proof. unfold equal. auto 10. (* FILL IN HERE *) Admitted.
+Proof. unfold equal. auto 10. Qed.
 (* GRADE_THEOREM 0.25: typechecks *)
 
 Example reduces :
   <{equal 4 4}> -->* 1.
 Proof.
-(* 
+
   unfold equal. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+  
+Qed.
 (* GRADE_THEOREM 0.25: reduces *)
 
 Example reduces2 :
   <{equal 4 5}> -->* 0.
 Proof.
-(* 
+
   unfold equal. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+Qed.
 
 End FixTest3.
 
@@ -1737,16 +1779,15 @@ Definition eotest :=
 
 Example typechecks :
   empty |- eotest \in (Nat * Nat).
-Proof. unfold eotest. eauto 30. (* FILL IN HERE *) Admitted.
+Proof. unfold eotest. eauto 30. Qed.
 (* GRADE_THEOREM 0.25: typechecks *)
 
 Example reduces :
   eotest -->* <{(0, 1)}>.
 Proof.
-(* 
-  unfold eotest. normalize.
-*)
-(* FILL IN HERE *) Admitted.
+  unfold eotest.
+  normalize.
+Qed.
 (* GRADE_THEOREM 0.25: reduces *)
 
 End FixTest4.
@@ -1891,7 +1932,7 @@ Proof with eauto.
     left...
   - (* T_Cons *)
     destruct IHHt1...
-    + (* head is a value *)
+    + (* head is a vaclue *)
       destruct IHHt2...
       * (* tail steps *)
         right. destruct H0 as [t2' Hstp].
@@ -1916,13 +1957,28 @@ Proof with eauto.
 
   (* Complete the proof. *)
 
-  (* pairs *)
-  (* FILL IN HERE *)
-  (* let *)
-  (* FILL IN HERE *)
-  (* fix *)
-  (* FILL IN HERE *)
-(* FILL IN HERE *) Admitted.
+    (* pairs *)
+  - (* T_Pair *)
+    destruct IHHt1...
+    + destruct IHHt2...
+      destruct H0. right. eexists...
+    + destruct H. right. eexists...
+  - (* T_Fst *)
+    destruct IHHt...
+    + destruct H; try solve_by_invert. right. eexists...
+    + destruct H. right. eexists...
+  - (* T_Snd *)
+    destruct IHHt...
+    + destruct H; try solve_by_invert. right. eexists...
+    + destruct H. right. eexists...
+  - (* T_Let *)
+    destruct IHHt1...
+  - (* T_Fix *)
+    destruct IHHt...
+    + destruct H; try solve_by_invert...
+    + destruct H...
+Qed.
+
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_progress : option (nat*string) := None.
@@ -1993,7 +2049,6 @@ Proof with eauto.
     + (* x<>y *)
       apply IHt.
       rewrite update_permute; auto.
-
   - (* tm_case *)
     rename s into x1, s0 into x2.
     eapply T_Case...
@@ -2034,10 +2089,10 @@ Proof with eauto.
         rewrite (update_permute _ _ _ _ _ _ n0) in H9.
         rewrite (update_permute _ _ _ _ _ _ n) in H9.
         assumption.
-
-  (* Complete the proof. *)
-
-  (* FILL IN HERE *) Admitted.
+  - destruct (eqb_stringP x s); subst.
+    + eapply T_Let. apply IHt1. exact H5. rewrite update_shadow in H6. assumption.
+    + eapply T_Let. apply IHt1. exact H5. apply IHt2. rewrite update_permute...
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_substitution_preserves_typing : option (nat*string) := None.
@@ -2080,16 +2135,12 @@ Proof with eauto.
       inversion HT1; subst.
       apply substitution_preserves_typing with <{{List T1}}>...
       apply substitution_preserves_typing with T1...
-
-  (* Complete the proof. *)
-
-  (* fst and snd *)
-  (* FILL IN HERE *)
-  (* let *)
-  (* FILL IN HERE *)
-  (* fix *)
-  (* FILL IN HERE *)
-(* FILL IN HERE *) Admitted.
+  - inversion HT...
+  - inversion HT...
+  - eapply substitution_preserves_typing. exact HT2... assumption.
+  - inversion HT; subst. eapply substitution_preserves_typing. exact H1.
+    constructor. assumption.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_preservation : option (nat*string) := None.
