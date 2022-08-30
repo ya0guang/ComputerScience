@@ -434,30 +434,31 @@ Definition manual_grade_for_arrow_sub_wrong : option (nat*string) := None.
     are then true?  Write _true_ or _false_ after each one.
     ([A], [B], and [C] here are base types like [Bool], [Nat], etc.)
 
-    - [T->S <: T->S]
+    - [T->S <: T->S] T
 
-    - [Top->U <: S->Top]
+    - [Top->U <: S->Top] T
 
-    - [(C->C) -> (A*B)  <:  (C->C) -> (Top*B)]
+    - [(C->C) -> (A*B)  <:  (C->C) -> (Top*B)] T
 
-    - [T->T->U <: S->S->V]
+    - [T->T->U <: S->S->V] T
 
-    - [(T->T)->U <: (S->S)->V]
+    - [(T->T)->U <: (S->S)->V] F
 
-    - [((T->S)->T)->U <: ((S->T)->S)->V]
+    - [((T->S)->T)->U <: ((S->T)->S)->V] T
 
-    - [S*V <: T*U]
+    - [S*V <: T*U] T
 
     [] *)
 
 (** **** Exercise: 2 stars, standard (subtype_order)
 
     The following types happen to form a linear order with respect to subtyping:
-    - [Top]
-    - [Top -> Student]
-    - [Student -> Person]
-    - [Student -> Top]
-    - [Person -> Student]
+1 <: 4 <: 2 :< 3 <: 0
+    - [Top] 0
+    - [Top -> Student] 1
+    - [Student -> Person] 2
+    - [Student -> Top] 3
+    - [Person -> Student] 4
 
 Write these types in order from the most specific to the most general.
 
@@ -475,26 +476,32 @@ Definition manual_grade_for_subtype_order : option (nat*string) := None.
     Which of the following statements are true?  Write _true_ or
     _false_ after each one.
 
+      False
       forall S T,
           S <: T  ->
           S->S   <:  T->T
 
+      True, T := A
       forall S,
            S <: A->A ->
            exists T,
               S = T->T  /\  T <: A
 
+      True, S := T1 -> T2
       forall S T1 T2,
            (S <: T1 -> T2) ->
            exists S1 S2,
               S = S1 -> S2  /\  T1 <: S1  /\  S2 <: T2 
 
+      False
       exists S,
            S <: S->S 
 
+      True, S := Top
       exists S,
            S->S <: S  
 
+      True, S := T1 * T2
       forall S T1 T2,
            S <: T1*T2 ->
            exists S1 S2,
@@ -509,30 +516,38 @@ Definition manual_grade_for_subtype_instances_tf_2 : option (nat*string) := None
 
     Which of the following statements are true, and which are false?
     - There exists a type that is a supertype of every other type.
+      True, Top
 
     - There exists a type that is a subtype of every other type.
+      False. We can easily construct one's subtype by adding a field
 
     - There exists a pair type that is a supertype of every other
       pair type.
+      True, (Top, Top)
 
     - There exists a pair type that is a subtype of every other
       pair type.
+      False
 
     - There exists an arrow type that is a supertype of every other
       arrow type.
+      False
 
     - There exists an arrow type that is a subtype of every other
       arrow type.
+      False
 
     - There is an infinite descending chain of distinct types in the
       subtype relation---that is, an infinite sequence of types
       [S0], [S1], etc., such that all the [Si]'s are different and
       each [S(i+1)] is a subtype of [Si].
+      True. A subtype can always be constructed by adding new field
 
     - There is an infinite _ascending_ chain of distinct types in
       the subtype relation---that is, an infinite sequence of types
       [S0], [S1], etc., such that all the [Si]'s are different and
       each [S(i+1)] is a supertype of [Si].
+      False. No way to construct supertype in similar way (Top is the end of the chain)
 
 *)
 
@@ -565,7 +580,14 @@ Definition manual_grade_for_proper_subtypes : option (nat*string) := None.
 
        empty |- (\p:T*Top. p.fst) ((\z:A.z), unit) \in A->A
 
+       (T*Top -> T) ((A->A), Unit) \in A->A
+
+       -> (A->A) <: T => smallest would be (A -> A)
+
    - What is the _largest_ type [T] that makes the same assertion true?
+
+     largest would be (A -> Top)
+   
 
 *)
 
@@ -578,6 +600,9 @@ Definition manual_grade_for_small_large_1 : option (nat*string) := None.
      assertion true?
 
        empty |- (\p:(A->A * B->B). p) ((\z:A.z), (\z:B.z)) \in T
+       -> A->A * B->B <: T
+
+       => smallest: A->A * B->B, largest: A->Top * B->Top
 
    - What is the _largest_ type [T] that makes the same assertion true?
 
@@ -592,6 +617,10 @@ Definition manual_grade_for_small_large_2 : option (nat*string) := None.
      assertion true?
 
        a:A |- (\p:(A*T). (p.snd) (p.fst)) (a, \z:A.z) \in A
+       -> (A * T -> T A) (A * (A->A)) \in A
+       -> A->A <: T, T A <: A
+       assuming T = X -> Y, then A <: X and Y <: A
+       => smallest: A->A; largest: Top->A
 
    - What is the _largest_ type [T] that makes the same assertion true?
 
@@ -622,6 +651,8 @@ Definition manual_grade_for_small_large_4 : option (nat*string) := None.
 
       exists S t,
         empty |- (\x:T. x x) t \in S
+
+        not exists. T must be in form of Y->Z, and Y = Y -> Z (app x x), which is impossible.
 *)
 
 (* Do not modify the following line: *)
@@ -634,6 +665,9 @@ Definition manual_grade_for_smallest_1 : option (nat*string) := None.
     assertion true?
 
       empty |- (\x:Top. x) ((\z:A.z) , (\z:B.z)) \in T
+      -> (Top->Top) (A->A * B->B) \in T
+      -> (A->A * B->B <: Top; (A->A * B->B) <: T
+      smallest: (A->Top * B->Top)
 *)
 
 (* Do not modify the following line: *)
@@ -647,6 +681,16 @@ Definition manual_grade_for_smallest_2 : option (nat*string) := None.
     T]?  (We consider two types to be different if they are written
     differently, even if each is a subtype of the other.  For example,
     [{x:A,y:B}] and [{y:B,x:A}] are different.)
+    1. {}
+    2. Top
+    3. {y:C->C, x:A}
+    4. {y:C->C}
+    5. {y:C->Top}
+    6. {y: Top}
+    7. {x:A}
+    8. {x:Top}
+    combinations of 45678
+
 
     [] *)
 
@@ -665,6 +709,8 @@ Definition manual_grade_for_smallest_2 : option (nat*string) := None.
                                    T1*T2 <: T2*T1
 
     for products.  Is this a good idea? Briefly explain why or why not.
+
+    No. It can be derived from other rules
 
 *)
 
@@ -912,14 +958,19 @@ Proof.
 Example subtyping_example_1 :
   <{Top->Student}> <:  <{(C->C)->Person}>.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  constructor. constructor.
+  apply sub_student_person.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 1 star, standard, optional (subtyping_example_2) *)
 Example subtyping_example_2 :
   <{Top->Person}> <: <{Person->Top}>.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  eauto.
+Qed.
+
 (** [] *)
 
 End Examples.
@@ -1033,7 +1084,12 @@ Lemma sub_inversion_Bool : forall U,
 Proof with auto.
   intros U Hs.
   remember <{Bool}> as V.
-  (* FILL IN HERE *) Admitted.
+  induction Hs...
+  - assert (H':=HeqV). apply IHHs2 in HeqV. subst.
+    destruct IHHs1...
+  - inversion HeqV.
+  - inversion HeqV.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (sub_inversion_arrow) *)
@@ -1045,7 +1101,16 @@ Proof with eauto.
   intros U V1 V2 Hs.
   remember <{V1->V2}> as V.
   generalize dependent V2. generalize dependent V1.
-  (* FILL IN HERE *) Admitted.
+  induction Hs; intros...
+  - rewrite HeqV in Hs2. assert (H':=HeqV). apply IHHs2 in HeqV.
+    destruct HeqV as [U1 [U2 [H1 [H2]]]]. apply IHHs1 in H1.
+    destruct H1 as [U3 [U4 [H3 [H4 H5]]]]. exists U3, U4.
+    split. assumption.
+    split. eapply S_Trans... eapply S_Trans...
+  - inversion HeqV.
+  - inversion HeqV. subst. exists S1, S2...
+Qed.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -1082,7 +1147,14 @@ Lemma canonical_forms_of_arrow_types : forall Gamma s T1 T2,
   exists x S1 s2,
      s = <{\x:S1,s2}>.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  intros. remember (<{T1->T2}>).
+  generalize dependent T1. generalize dependent T2.
+  induction H; intros; try solve_by_invert; subst.
+  - eexists...
+  - apply sub_inversion_arrow in H1. destruct H1 as [U1 [U2 [Ha]]].
+    eapply IHhas_type...
+Qed.
+
 (** [] *)
 
 (** Similarly, the canonical forms of type [Bool] are the constants
@@ -1253,7 +1325,11 @@ Lemma typing_inversion_var : forall Gamma (x:string) T,
   exists S,
     Gamma x = Some S /\ S <: T.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  intros. remember (tm_var x) as t. 
+  induction H; subst; try solve_by_invert.
+  - exists T1... inversion Heqt. subst...
+  - destruct IHhas_type... destruct H1. exists x0...
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (typing_inversion_app) *)
@@ -1263,7 +1339,12 @@ Lemma typing_inversion_app : forall Gamma t1 t2 T2,
     Gamma |- t1 \in (T1->T2) /\
     Gamma |- t2 \in T1.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  intros. remember <{t1 t2}>.
+  induction H; subst; try solve_by_invert.
+  - inversion Heqt. subst. exists T2...
+  - destruct IHhas_type... destruct H1. exists x...
+Qed.
+
 (** [] *)
 
 (** The inversion lemmas for typing and for subtyping between arrow
@@ -1320,12 +1401,18 @@ Lemma substitution_preserves_typing : forall Gamma x U t v T,
    empty |- v \in U   ->
    Gamma |- [x:=v]t \in T.
 Proof.
-Proof.
   intros Gamma x U t v T Ht Hv.
   remember (x |-> U; Gamma) as Gamma'.
   generalize dependent Gamma.
   induction Ht; intros Gamma' G; simpl; eauto.
- (* FILL IN HERE *) Admitted.
+  - destruct (eqb_stringP x x0); subst.
+    + rewrite update_eq in H. inversion H. subst. apply weakening_empty. assumption.
+    + rewrite update_neq in H; eauto.
+  - destruct (eqb_stringP x x0); subst.
+    + constructor. rewrite update_shadow in Ht. assumption.
+    + constructor. apply IHHt. rewrite update_permute; eauto.
+Qed.
+
 
 (* ================================================================= *)
 (** ** Preservation *)
