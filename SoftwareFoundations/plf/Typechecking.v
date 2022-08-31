@@ -139,7 +139,7 @@ Notation " 'fail' "
 
 Module STLCChecker.
 Import STLCTypes.
-
+  
 (** Now we can write the same type-checking function in a more
     imperative-looking style using these notations. *)
 
@@ -184,6 +184,7 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
     relation -- that is, [type_check] and [has_type] define the same
     partial function. *)
 
+
 Theorem type_checking_sound : forall Gamma t T,
   type_check Gamma t = Some T -> has_type Gamma t T.
 Proof with eauto.
@@ -191,7 +192,7 @@ Proof with eauto.
   induction t; intros Gamma T Htc; inversion Htc.
   - (* var *) rename s into x. destruct (Gamma x) eqn:H.
     rename t into T'. inversion H0. subst. eauto. solve_by_invert.
-  - (* app *)
+  - (* app *) 
     remember (type_check Gamma t1) as TO1.
     destruct TO1 as [T1|]; try solve_by_invert;
     destruct T1 as [|T11 T12]; try solve_by_invert;
@@ -345,9 +346,30 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
   (* Complete the following cases. *)
   
   (* sums *)
-  (* FILL IN HERE *)
+  | <{inl T2 t1}> =>
+      T1 <- type_check Gamma t1 ;;
+      return <{{T1 + T2}}>
+  | <{inr T1 t2}> =>
+      T2 <- type_check Gamma t2 ;;
+      return <{{T1 + T2}}>
+  | <{ case t0 of | inl x1 => t1 | inr x2 => t2}> =>
+      match type_check Gamma t0 with
+      | Some <{{T1 + T2}}> =>
+          T3 <- type_check (x1 |-> T1; Gamma) t1 ;;
+          T4 <- type_check (x2 |-> T2; Gamma) t2 ;;
+          if eqb_ty T3 T4 then return T3 else None
+      | _ => None
+      end      
   (* lists (the [tlcase] is given for free) *)
-  (* FILL IN HERE *)
+  | <{nil T}> => return <{{List T}}>
+  | <{h :: t}> =>
+      Th <- type_check Gamma h ;;
+      Tt <- type_check Gamma t ;;
+      match Tt with
+      | <{{List T}}> =>
+          if eqb_ty Th T then return Tt else fail
+      | _ => None
+      end
   | <{ case t0 of | nil => t1 | x21 :: x22 => t2 }> =>
       match type_check Gamma t0 with
       | Some <{{List T}}> =>
@@ -360,14 +382,36 @@ Fixpoint type_check (Gamma : context) (t : tm) : option ty :=
       | _ => None
       end
   (* unit *)
-  (* FILL IN HERE *)
+  | <{unit}> => return <{{Unit}}>
   (* pairs *)
-  (* FILL IN HERE *)
+  | <{(t1, t2)}> =>
+      T1 <- type_check Gamma t1 ;;
+      T2 <- type_check Gamma t2 ;;
+      return <{{T1 * T2}}>
+  | <{t.fst}> =>
+      T <- type_check Gamma t ;;
+      match T with
+      | <{{T1 * T2}}> => return T1
+      | _ => None
+      end
+  | <{t.snd}> =>
+      T <- type_check Gamma t ;;
+      match T with
+      | <{{T1 * T2}}> => return T2
+      | _ => None
+      end
   (* let *)
-  (* FILL IN HERE *)
+  | <{let x=t1 in t2}> =>
+      T1 <- type_check Gamma t1 ;;
+      T2 <- type_check (x |-> T1; Gamma) t2 ;;
+      return T2     
   (* fix *)
-  (* FILL IN HERE *)
-  | _ => None  (* ... and delete this line when you complete the exercise. *)
+  | <{ fix x }> =>
+      T <- type_check Gamma x ;;
+      match T with
+      | <{{ T1 -> T2 }}> => if eqb_ty T1 T2 then return T1 else None
+      | _ => None
+      end
   end.
 
 (** Just for fun, we'll do the soundness proof with just a bit more
@@ -427,7 +471,23 @@ Proof with eauto.
     invert_typecheck Gamma t3 T3.
     destruct T1; try solve_by_invert.
     case_equality T2 T3.
-  (* FILL IN HERE *)
+  - (* inl *)
+    invert_typecheck Gamma t0 T1.
+  - (* inr *)
+    invert_typecheck Gamma t0 T2.
+  - (* case *)
+    fully_invert_typecheck Gamma t1 T1 T11 T12.
+    remember (s |-> T11; Gamma) as Gamma1.
+    invert_typecheck Gamma1 t2 T3.
+    remember (s0 |-> T12; Gamma) as Gamma2.
+    invert_typecheck Gamma2 t3 T4.
+    case_equality T3 T4.
+  - (* nil *)
+    eauto.
+  - (* cons *)
+    invert_typecheck Gamma t1 Th.
+    fully_invert_typecheck Gamma t2 T1 T11 T12.
+    case_equality Th T11.
   - (* tlcase *)
     rename s into x31, s0 into x32.
     fully_invert_typecheck Gamma t1 T1 T11 T12.
@@ -435,7 +495,21 @@ Proof with eauto.
     remember (x31 |-> T11 ; x32 |-> <{{List T11}}> ; Gamma) as Gamma'2.
     invert_typecheck Gamma'2 t3 T3.
     case_equality T2 T3.
-  (* FILL IN HERE *)
+  - (* unit *)
+    eauto.
+  - (* pair *)
+    invert_typecheck Gamma t1 T1. invert_typecheck Gamma t2 T2.
+  - (* fst *)
+    fully_invert_typecheck Gamma t T1 T11 T12.
+  - (* snd *)
+    fully_invert_typecheck Gamma t T2 T21 T22.
+  - (* let *)
+    invert_typecheck Gamma t1 T1.
+    remember (s |-> T1; Gamma) as Gamma'.
+    invert_typecheck Gamma' t2 T2.
+  - (* fix *)
+    fully_invert_typecheck Gamma t T1 T11 T12.
+    case_equality T11 T12.
 Qed.
 
 Theorem type_checking_complete : forall Gamma t T,
@@ -454,10 +528,7 @@ Proof.
     try (rewrite (eqb_ty_refl T3));
     eauto.
     - destruct (Gamma x0); [assumption| solve_by_invert].
-      Admitted. (* ... and delete this line *)
-(* 
-Qed. (* ... and uncomment this one *)
-*)
+Qed. 
 End TypecheckerExtensions.
 (** [] *)
 
