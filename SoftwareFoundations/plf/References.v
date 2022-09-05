@@ -499,9 +499,11 @@ Notation "t1 ; t2" := (tseq t1 t2) (in custom stlc at level 3).
     If we defined [update] more compactly like this
 
       update = \a:NatArray. \m:Nat. \v:Nat.
-                  a := (\n:Nat. if equal m n then v else (!a) n)
+                  a := (\n:Nat. if equal m n then v else (!a) n) 
 
 would it behave the same? *)
+
+(* It should behave the same *)
 
 (* FILL IN HERE *)
 
@@ -708,7 +710,7 @@ Proof with auto.
     + (* st = [] *) destruct l2...
     + (* st = t2 :: st2 *)
       destruct l2...
-      simpl; apply IHl1'...
+      simpl. apply IHl1'...
 Qed.
 
 (* ================================================================= *)
@@ -920,7 +922,7 @@ Notation "t '/' st '-->*' t' '/' st'" :=
 (* ################################################################# *)
 (** * Typing *)
 
-(** The contexts assigning types to free variables are exactly the
+(** The contexts assigning types to free variables re exactly the
     same as for the STLC: partial maps from identifiers to types. *)
 
 Definition context := partial_map ty.
@@ -1212,6 +1214,11 @@ Definition store_well_typed (ST:store_ty) (st:store) :=
     Can you find a store [st], and two
     different store typings [ST1] and [ST2] such that both
     [ST1 |- st] and [ST2 |- st]? *)
+
+(* st: [loc 0]
+   ST1: [Nat]
+   ST2: [Unit]
+ *)
 
 (* FILL IN HERE *)
 
@@ -1643,7 +1650,8 @@ Proof with eauto.
     + (* t1 is a value *)
       inversion Ht1p; subst; try solve [ inversion Ht ].
       * (* t1 is a const *)
-        exists <{ {S n} }>, st...
+        eexists...
+        (* exists <{ {S n} }>, st... *)
     + (* t1 steps *)
       destruct Ht1p as [t1' [st' Hstep]].
       exists <{ succ t1' }>, st'...
@@ -1849,24 +1857,32 @@ Qed.
     sure it gives the correct result when applied to the argument
     [4].) *)
 
-Definition factorial : tm
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+(* assuming y is ref of fun *)
+Definition fact_fun : tm :=
+  <{\r: Nat, if0 r then 1 else r * ((!y) (pred r))}>.
+
+Definition factorial : tm :=
+  <{\z: Nat, (\y: Ref (Nat->Nat), (y:= fact_fun); (!y) z) (ref (\z: Nat, 0)) }>.
+
+Definition factorial' : tm :=
+  <{\z: Nat, (\y: Ref (Nat->Nat), (!y) z) ((y:= fact_fun); ref (\z: Nat, 0)) }>.
 
 Lemma factorial_type : empty; nil |- factorial \in (Nat -> Nat).
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  unfold factorial, tseq. reduce...
+  repeat econstructor.
+Qed.
 
 (** If your definition is correct, you should be able to just
     uncomment the example below; the proof should be fully
     automatic using the [reduce] tactic. *)
 
-(* 
+
 Lemma factorial_4 : exists st,
   <{ factorial 4 }> / nil -->* tm_const 24 / st.
 Proof.
   eexists. unfold factorial. reduce.
 Qed.
-*)
 (** [] *)
 
 (* ################################################################# *)
